@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { IProduct } from '../../../interfaces/product';
-import { connect } from '../../../database/db';
 import { db } from '../../../database';
 import { Product } from '../../../models';
 

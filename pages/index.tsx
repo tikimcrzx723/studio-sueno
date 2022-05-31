@@ -3,24 +3,27 @@ import type { NextPage } from 'next';
 import { Typography } from '@mui/material';
 import { ShopLayout } from '../components/layouts';
 
-import { initialData } from '../database/products';
+import { useProducts } from '../hooks/useProducts';
+import { FullScreenLoading } from '../components/ui';
 import { ProductList } from '../components/products';
 
-const Home: NextPage = () => {
+const HomePage: NextPage = () => {
+  const { products, isLoading } = useProducts('products');
+
   return (
     <ShopLayout
-      title={'Studio-Sueno - Home'}
+      title={'Studio-Sueno - HomePage'}
       pageDescription={'Encuentra las mejores fotos'}
     >
-      <Typography variant="h1" component="h1">
+      <Typography variant='h1' component='h1'>
         Tienda
       </Typography>
-      <Typography variant="h2" sx={{ mb: 1 }}>
+      <Typography variant='h2' sx={{ mb: 1 }} fontSize={20}>
         Todos los productos
       </Typography>
-      <ProductList products={initialData.products as any} />
+      {isLoading ? <FullScreenLoading /> : <ProductList products={products} />}
     </ShopLayout>
   );
 };
 
-export default Home;
+export default HomePage;
