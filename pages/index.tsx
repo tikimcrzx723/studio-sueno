@@ -12,7 +12,7 @@ const HomePage: NextPage = () => {
 
   return (
     <ShopLayout
-      title={'Studio-Sueno - HomePage'}
+      title={'Studio-Sueno - Home'}
       pageDescription={'Encuentra las mejores fotos'}
     >
       <Typography variant='h1' component='h1'>
