@@ -19,7 +19,8 @@ type CartActionType =
         total: number;
       };
     }
-  | { type: '[Cart] - LoadAddress from cookies'; payload: ShippingAddress };
+  | { type: '[Cart] - LoadAddress from cookies'; payload: ShippingAddress }
+  | { type: '[Cart] - Update Address'; payload: ShippingAddress };
 
 export const cartReducer = (
   state: CartState,
@@ -68,6 +69,7 @@ export const cartReducer = (
         ...action.payload,
       };
 
+    case '[Cart] - Update Address':
     case '[Cart] - LoadAddress from cookies':
       return {
         ...state,
