@@ -1,5 +1,6 @@
 import { FC, useReducer, PropsWithChildren, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useSession, signOut } from 'next-auth/react';
 
 import { IUser } from '../../interfaces';
 import { AuthContext, authReducer } from './';
@@ -21,11 +22,20 @@ interface Props {}
 
 export const AuthProvider: FC<PropsWithChildren<Props>> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, AUTH_INITIAL_STATE);
+  const { data, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    checkToken();
-  }, []);
+    if (status === 'authenticated') {
+      // console.log({ user: data?.user });
+
+      dispatch({ type: '[Auth] - Login', payload: data?.user as IUser });
+    }
+  }, [status, data]);
+
+  // useEffect(() => {
+  //   checkToken();
+  // }, []);
 
   const checkToken = async () => {
     if (!Cookies.get('token')) return;
@@ -90,7 +100,7 @@ export const AuthProvider: FC<PropsWithChildren<Props>> = ({ children }) => {
   };
 
   const logout = () => {
-    Cookies.remove('token');
+    // Cookies.remove('tosken');
     Cookies.remove('cart');
 
     Cookies.remove('firstName');
@@ -101,7 +111,9 @@ export const AuthProvider: FC<PropsWithChildren<Props>> = ({ children }) => {
     Cookies.remove('city');
     Cookies.remove('country');
     Cookies.remove('phone');
-    router.reload();
+
+    // router.reload();
+    signOut();
   };
 
   return (

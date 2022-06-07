@@ -1,39 +1,63 @@
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import NextLink from 'next/link';
-import { CartContext } from '../../context/cart/CartContext';
+import { useRouter } from 'next/router';
+import Cookies from 'js-cookie';
 
 import {
+  Link,
   Box,
   Button,
   Card,
   CardContent,
   Divider,
   Grid,
-  Link,
   Typography,
 } from '@mui/material';
+
+import { CartContext } from '../../context';
+import { ShopLayout } from '../../components/layouts/ShopLayout';
 import { CartList, OrderSummary } from '../../components/cart';
-import { ShopLayout } from '../../components/layouts';
 import { countries } from '../../utils';
 
 const SummaryPage = () => {
-  const { shippingAddress, numberOfItems } = useContext(CartContext);
+  const router = useRouter();
+  const { shippingAddress, numberOfItems, createOrder } =
+    useContext(CartContext);
+
+  useEffect(() => {
+    if (!Cookies.get('firstName')) {
+      router.push('/checkout/address');
+    }
+  }, [router]);
+
+  const onCreateOrder = () => {
+    createOrder();
+  };
 
   if (!shippingAddress) {
     return <></>;
   }
 
-  const { firstName, lastName, address, city, country, phone, zip, address2 } =
-    shippingAddress;
+  const {
+    firstName,
+    lastName,
+    address,
+    address2 = '',
+    city,
+    country,
+    phone,
+    zip,
+  } = shippingAddress;
 
   return (
     <ShopLayout
-      title='Resumen de la orden'
-      pageDescription='Resumen de la Orden'
+      title='Resumen de orden'
+      pageDescription={'Resumen de la orden'}
     >
       <Typography variant='h1' component='h1'>
-        Carrito
+        Resumen de la orden
       </Typography>
+
       <Grid container>
         <Grid item xs={12} sm={7}>
           <CartList />
@@ -42,44 +66,51 @@ const SummaryPage = () => {
           <Card className='summary-card'>
             <CardContent>
               <Typography variant='h2'>
-                Resumen ({numberOfItems} producto
-                {numberOfItems === 1 ? '' : 's'})
+                Resumen ({numberOfItems}{' '}
+                {numberOfItems === 1 ? 'producto' : 'productos'})
               </Typography>
               <Divider sx={{ my: 1 }} />
 
-              <Box display='flex' justifyContent='end'>
+              <Box display='flex' justifyContent='space-between'>
+                <Typography variant='subtitle1'>
+                  Dirección de entrega
+                </Typography>
                 <NextLink href='/checkout/address' passHref>
                   <Link underline='always'>Editar</Link>
                 </NextLink>
               </Box>
 
-              <Typography variant='subtitle1'>Dirección de Entrega</Typography>
               <Typography>
                 {firstName} {lastName}
               </Typography>
               <Typography>
                 {address}
-                {address2 ? `, ${address2}` : ''}
+                {address2 ? `, ${address2}` : ''}{' '}
               </Typography>
               <Typography>
                 {city}, {zip}
               </Typography>
-              <Typography>
-                {countries.find((c) => c.code === country)?.name}
-              </Typography>
+              {/* <Typography>{ countries.find( c => c.code === country )?.name }</Typography> */}
+              <Typography>{country}</Typography>
               <Typography>{phone}</Typography>
 
               <Divider sx={{ my: 1 }} />
 
               <Box display='flex' justifyContent='end'>
-                <NextLink href='/checkout/address' passHref>
+                <NextLink href='/cart' passHref>
                   <Link underline='always'>Editar</Link>
                 </NextLink>
               </Box>
 
               <OrderSummary />
+
               <Box sx={{ mt: 3 }}>
-                <Button color='secondary' className='circular-btn' fullWidth>
+                <Button
+                  color='secondary'
+                  className='circular-btn'
+                  fullWidth
+                  onClick={onCreateOrder}
+                >
                   Confirmar Orden
                 </Button>
               </Box>

@@ -1,8 +1,9 @@
 import { FC, PropsWithChildren, useEffect, useReducer } from 'react';
 
-import { ICartProduct } from '../../interfaces';
+import { ICartProduct, ShippingAddress } from '../../interfaces';
 import { CartContext, cartReducer } from './';
 import Cookies from 'js-cookie';
+import { appApi } from '../../api';
 
 export interface CartState {
   isLoaded: boolean;
@@ -14,20 +15,9 @@ export interface CartState {
   shippingAddress?: ShippingAddress;
 }
 
-export interface ShippingAddress {
-  firstName: string;
-  lastName: string;
-  address: string;
-  address2?: string;
-  zip: string;
-  city: string;
-  country: string;
-  phone: string;
-}
-
 const CART_INITIAL_STATE: CartState = {
   isLoaded: false,
-  cart: [],
+  cart: Cookies.get('cart') ? JSON.parse(Cookies.get('cart')!) : [],
   numberOfItems: 0,
   subTotal: 0,
   tax: 0,
@@ -161,6 +151,15 @@ export const CartProvider: FC<PropsWithChildren<Props>> = ({ children }) => {
     dispatch({ type: '[Cart] - Update Address', payload: address });
   };
 
+  const createOrder = async () => {
+    try {
+      const { data } = await appApi.post('/orders');
+      console.log(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -171,6 +170,9 @@ export const CartProvider: FC<PropsWithChildren<Props>> = ({ children }) => {
         updateCartQuantity,
         removeCartProduct,
         updateAddress,
+
+        // Orders
+        createOrder,
       }}
     >
       {children}
