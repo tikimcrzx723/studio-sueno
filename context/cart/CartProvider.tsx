@@ -1,9 +1,10 @@
 import { FC, PropsWithChildren, useEffect, useReducer } from 'react';
 
-import { ICartProduct, ShippingAddress } from '../../interfaces';
+import { ICartProduct, IOrder, ShippingAddress } from '../../interfaces';
 import { CartContext, cartReducer } from './';
 import Cookies from 'js-cookie';
 import { appApi } from '../../api';
+import axios from 'axios';
 
 export interface CartState {
   isLoaded: boolean;
@@ -17,7 +18,7 @@ export interface CartState {
 
 const CART_INITIAL_STATE: CartState = {
   isLoaded: false,
-  cart: Cookies.get('cart') ? JSON.parse(Cookies.get('cart')!) : [],
+  cart: [],
   numberOfItems: 0,
   subTotal: 0,
   tax: 0,
@@ -151,12 +152,46 @@ export const CartProvider: FC<PropsWithChildren<Props>> = ({ children }) => {
     dispatch({ type: '[Cart] - Update Address', payload: address });
   };
 
-  const createOrder = async () => {
+  const createOrder = async (): Promise<{
+    hasError: boolean;
+    message: string;
+  }> => {
+    if (!state.shippingAddress) {
+      throw new Error('No hay dirección de entrega');
+    }
+
+    const body: IOrder = {
+      orderItems: state.cart.map((p) => ({
+        ...p,
+        size: p.size!,
+      })),
+      shippingAddress: state.shippingAddress,
+      numberOfItems: state.numberOfItems,
+      subTotal: state.subTotal,
+      tax: state.tax,
+      total: state.total,
+      isPaid: false,
+    };
+
     try {
-      const { data } = await appApi.post('/orders');
-      console.log(data);
+      const { data } = await appApi.post<IOrder>('/orders', body);
+      // TODO: Dispatch
+      dispatch({ type: '[Cart] - Order complete' });
+      return {
+        hasError: false,
+        message: data._id!,
+      };
     } catch (error) {
-      console.log(error);
+      if (axios.isAxiosError(error)) {
+        return {
+          hasError: true,
+          message: error.response?.data + '',
+        };
+      }
+      return {
+        hasError: true,
+        message: 'Error no controlado, hable con el administrador',
+      };
     }
   };
 

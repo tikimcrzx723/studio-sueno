@@ -1,4 +1,4 @@
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import NextLink from 'next/link';
 import { useRouter } from 'next/router';
 import Cookies from 'js-cookie';
@@ -12,17 +12,20 @@ import {
   Divider,
   Grid,
   Typography,
+  Chip,
 } from '@mui/material';
 
 import { CartContext } from '../../context';
 import { ShopLayout } from '../../components/layouts/ShopLayout';
 import { CartList, OrderSummary } from '../../components/cart';
-import { countries } from '../../utils';
 
 const SummaryPage = () => {
   const router = useRouter();
   const { shippingAddress, numberOfItems, createOrder } =
     useContext(CartContext);
+
+  const [isPosting, setIsPosting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (!Cookies.get('firstName')) {
@@ -30,8 +33,17 @@ const SummaryPage = () => {
     }
   }, [router]);
 
-  const onCreateOrder = () => {
-    createOrder();
+  const onCreateOrder = async () => {
+    setIsPosting(true);
+    const { hasError, message } = await createOrder();
+
+    if (hasError) {
+      setIsPosting(false);
+      setErrorMessage(message);
+      return;
+    }
+
+    router.replace(`/orders/${message}`);
   };
 
   if (!shippingAddress) {
@@ -104,15 +116,22 @@ const SummaryPage = () => {
 
               <OrderSummary />
 
-              <Box sx={{ mt: 3 }}>
+              <Box sx={{ mt: 3 }} display='flex' flexDirection='column'>
                 <Button
                   color='secondary'
                   className='circular-btn'
                   fullWidth
                   onClick={onCreateOrder}
+                  disabled={isPosting}
                 >
                   Confirmar Orden
                 </Button>
+
+                <Chip
+                  color='error'
+                  label={errorMessage}
+                  sx={{ display: errorMessage ? 'flex' : 'none', mt: 2 }}
+                />
               </Box>
             </CardContent>
           </Card>
