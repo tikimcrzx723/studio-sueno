@@ -21,79 +21,91 @@ import {
 import { getSession } from 'next-auth/react';
 import { dbOrders } from '../../database';
 import { IOrder } from '../../interfaces';
-import moongose from 'mongoose';
 
 interface Props {
   order: IOrder;
 }
 
 const OrderPage: NextPage<PropsWithChildren<Props>> = ({ order }) => {
+  const { shippingAddress } = order;
   return (
     <ShopLayout
-      title='Resumen de la orden 32455631325'
+      title='Resumen de la orden'
       pageDescription='Resumen de la Orden'
     >
       <Typography variant='h1' component='h1'>
-        Orden: ABC
+        Orden: {order._id}
+        {order.isPaid}
       </Typography>
+      {order.isPaid ? (
+        <Chip
+          sx={{ my: 2 }}
+          label='Orden ya fue pagada'
+          variant='outlined'
+          color='success'
+          icon={<CreditScoreOutlined />}
+        />
+      ) : (
+        <Chip
+          sx={{ my: 2 }}
+          label='Pendiente de pago'
+          variant='outlined'
+          color='error'
+          icon={<CreditCardOffOutlined />}
+        />
+      )}
 
-      {/* <Chip
-        sx={{ my: 2 }}
-        label="Pendiente de pago"
-        variant="outlined"
-        color="error"
-        icon={<CreditCardOffOutlined />}
-      /> */}
-      <Chip
-        sx={{ my: 2 }}
-        label='Orden ya fue pagada'
-        variant='outlined'
-        color='success'
-        icon={<CreditScoreOutlined />}
-      />
-
-      <Grid container>
+      <Grid container className='fadeIn'>
         <Grid item xs={12} sm={7}>
-          <CartList />
+          <CartList products={order.orderItems} />
         </Grid>
         <Grid item xs={12} sm={5}>
           <Card className='summary-card'>
             <CardContent>
-              <Typography variant='h2'>Resumen (3 productos)</Typography>
+              <Typography variant='h2'>
+                Resumen ({order.numberOfItems} producto
+                {order.numberOfItems > 1 ? 's' : ''})
+              </Typography>
               <Divider sx={{ my: 1 }} />
-
-              <Box display='flex' justifyContent='end'>
-                <NextLink href='/checkout/address' passHref>
-                  <Link underline='always'>Editar</Link>
-                </NextLink>
-              </Box>
 
               <Typography variant='subtitle1'>Dirección de Entrega</Typography>
-              <Typography>Tikimioo</Typography>
-              <Typography>Algun Lugar 3245</Typography>
-              <Typography>Stittsville, HYA 23S</Typography>
-              <Typography>Canadá</Typography>
-              <Typography>+1 559 507 2896</Typography>
+              <Typography>
+                {shippingAddress.firstName} {shippingAddress.lastName}
+              </Typography>
+              <Typography>
+                {shippingAddress.address}{' '}
+                {shippingAddress.address2
+                  ? `, ${shippingAddress.address2}`
+                  : ''}
+              </Typography>
+              <Typography>
+                {shippingAddress.city}, {shippingAddress.zip}
+              </Typography>
+              <Typography>{shippingAddress.country}</Typography>
+              <Typography>{shippingAddress.phone}</Typography>
 
               <Divider sx={{ my: 1 }} />
 
-              <Box display='flex' justifyContent='end'>
-                <NextLink href='/cart' passHref>
-                  <Link underline='always'>Editar</Link>
-                </NextLink>
-              </Box>
-
-              <OrderSummary />
-              <Box sx={{ mt: 3 }}>
-                <h1>Pagar</h1>
-
-                <Chip
-                  sx={{ my: 2 }}
-                  label='Orden ya fue pagada'
-                  variant='outlined'
-                  color='success'
-                  icon={<CreditScoreOutlined />}
-                />
+              <OrderSummary
+                orderValues={{
+                  numberOfItems: order.numberOfItems,
+                  subTotal: order.subTotal,
+                  total: order.total,
+                  tax: order.tax,
+                }}
+              />
+              <Box sx={{ mt: 3 }} display='flex' flexDirection='column'>
+                {order.isPaid ? (
+                  <Chip
+                    sx={{ my: 2 }}
+                    label='Orden ya fue pagada'
+                    variant='outlined'
+                    color='success'
+                    icon={<CreditScoreOutlined />}
+                  />
+                ) : (
+                  <h1>Pagar</h1>
+                )}
               </Box>
             </CardContent>
           </Card>
@@ -132,10 +144,6 @@ export const getServerSideProps: GetServerSideProps = async ({
       },
     };
   }
-
-  // const userId = new moongose.Types.ObjectId(session.user._id);
-  console.log(session.user._id);
-  // console.log(userId);
 
   if (order.user !== session.user._id) {
     return {

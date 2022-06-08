@@ -12,14 +12,16 @@ import {
 } from '@mui/material';
 import { ItemCounter } from '../ui';
 import { CartContext } from '../../context/cart';
-import { ICartProduct } from '../../interfaces';
+import { ICartProduct, IOrderItem } from '../../interfaces';
 
 interface Props {
   editable?: boolean;
+  products?: IOrderItem[];
 }
 
 export const CartList: FC<PropsWithChildren<Props>> = ({
   editable = false,
+  products,
 }) => {
   const { cart, updateCartQuantity, removeCartProduct } =
     useContext(CartContext);
@@ -32,9 +34,11 @@ export const CartList: FC<PropsWithChildren<Props>> = ({
     updateCartQuantity(product);
   };
 
+  const productToShow = products ? products : cart;
+
   return (
     <>
-      {cart.map((product) => (
+      {productToShow.map((product) => (
         <Grid
           container
           spacing={2}
@@ -67,7 +71,7 @@ export const CartList: FC<PropsWithChildren<Props>> = ({
                   currentValue={product.quantity}
                   maxValue={10}
                   updatedQuantity={(newValue) =>
-                    onNewCartQuantityValue(product, newValue)
+                    onNewCartQuantityValue(product as ICartProduct, newValue)
                   }
                 />
               ) : (
@@ -89,7 +93,7 @@ export const CartList: FC<PropsWithChildren<Props>> = ({
               <Button
                 variant='text'
                 color='secondary'
-                onClick={() => removeCartProduct(product)}
+                onClick={() => removeCartProduct(product as ICartProduct)}
               >
                 Remover
               </Button>
