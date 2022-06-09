@@ -1,8 +1,10 @@
 import axios from 'axios';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getSession } from 'next-auth/react';
 import { db } from '../../../database';
 import { IPaypal } from '../../../interfaces';
 import { Order } from '../../../models';
+import { isValidObjectId } from 'mongoose';
 
 type Data = {
   message: string;
@@ -56,7 +58,19 @@ const getPaypalBearerToken = async (): Promise<string | null> => {
 
 const payOrder = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
   // TODO: validar sesión del usuario
+  const session: any = await getSession({ req });
+  if (!session) {
+    return res
+      .status(401)
+      .json({ message: 'Debe de estar autenticado para hacer esto' });
+  }
+
   // TODO: validar mongoID
+  if (!isValidObjectId(session.user._id)) {
+    return res
+      .status(400)
+      .json({ message: 'No se reconoce ese usuario haga login' });
+  }
 
   const paypalBearerToken = await getPaypalBearerToken();
 
