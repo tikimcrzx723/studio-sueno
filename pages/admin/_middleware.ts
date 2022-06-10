@@ -3,7 +3,10 @@ import { getToken } from 'next-auth/jwt';
 // import { jwt } from '../../utils';
 
 export async function middleware(req: NextRequest | any, ev: NextFetchEvent) {
-  const session = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const session: any = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
 
   if (!session) {
     try {
@@ -15,6 +18,17 @@ export async function middleware(req: NextRequest | any, ev: NextFetchEvent) {
       return NextResponse.redirect(
         `${url.origin}/auth/login?p=${requestedPage}`
       );
+    }
+  }
+
+  const validRoles = ['admin', 'super-user', 'SEO'];
+
+  if (!validRoles.includes(session.user.role)) {
+    try {
+      return NextResponse.redirect('/');
+    } catch (error) {
+      const url = req.nextUrl.clone();
+      return NextResponse.redirect(`${url.origin}/`);
     }
   }
 

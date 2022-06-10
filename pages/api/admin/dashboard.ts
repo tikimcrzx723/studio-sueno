@@ -12,7 +12,10 @@ type Data = {
   lowInventory: number; // products with menor 10
 };
 
-export default function (req: NextApiRequest, res: NextApiResponse<Data>) {
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
   switch (req.method) {
     case 'GET':
       return getData(req, res);
