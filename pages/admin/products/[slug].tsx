@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 import { GetServerSideProps, NextPage } from 'next';
 import { useForm } from 'react-hook-form';
 
@@ -56,15 +56,36 @@ interface Props {
 }
 
 const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
+  const [newTagValue, setNewTagValue] = useState('');
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     getValues,
     setValue,
+    watch,
   } = useForm({
     defaultValues: product,
   });
+
+  useEffect(() => {
+    const subscription = watch((value, { name, type }) => {
+      console.log({ value, name, type });
+      if (name === 'title') {
+        const newSlug =
+          value.title
+            ?.trim()
+            .replaceAll(' ', '_')
+            .replaceAll("'", '')
+            .toLowerCase() || '';
+
+        setValue('slug', newSlug);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [watch, setValue]);
 
   const onChangeSize = (size: string) => {
     const currentSizes = getValues('sizes');
@@ -80,10 +101,27 @@ const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
     });
   };
 
-  const onDeleteTag = (tag: string) => {};
+  const onNewTag = () => {
+    const newTag = newTagValue.trim().toLocaleLowerCase();
+    setNewTagValue('');
+    const currentTags = getValues('tags');
 
-  const onSubmit = (formData: FormData) => {
-    console.log();
+    if (currentTags.includes(newTag)) {
+      return;
+    }
+
+    currentTags.push(newTag);
+  };
+
+  const onDeleteTag = (tag: string) => {
+    const updatedTags = getValues('tags').filter((t) => t !== tag);
+    setValue('tags', updatedTags, { shouldValidate: true });
+  };
+
+  const onSubmit = (form: FormData) => {
+    if (form.images.length < 2) {
+      return alert('Mínimo 2 imagenes');
+    }
   };
   return (
     <AdminLayout
@@ -248,6 +286,11 @@ const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
               fullWidth
               sx={{ mb: 1 }}
               helperText='Presiona [spacebar] para agregar'
+              value={newTagValue}
+              onChange={({ target }) => setNewTagValue(target.value)}
+              onKeyUp={({ code }) =>
+                code === 'Space' ? onNewTag() : undefined
+              }
             />
 
             <Box
@@ -260,7 +303,7 @@ const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
               }}
               component='ul'
             >
-              {product.tags.map((tag) => {
+              {getValues('tags').map((tag) => {
                 return (
                   <Chip
                     key={tag}
