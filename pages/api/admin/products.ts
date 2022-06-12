@@ -1,5 +1,8 @@
 import { isValidObjectId } from 'mongoose';
 import type { NextApiRequest, NextApiResponse } from 'next';
+
+import { v2 as cloudinary } from 'cloudinary';
+
 import { db } from '../../../database';
 import { IProduct } from '../../../interfaces';
 import { Product } from '../../../models';
@@ -20,6 +23,7 @@ export default function handler(
       break;
 
     case 'POST':
+      return createProduct(req, res);
       break;
 
     default:
@@ -50,7 +54,7 @@ const updateProducts = async (
     return res.status(400).json({ message: 'no es un ObjectId Valido' });
   }
 
-  if (images.length <= 2) {
+  if (images.length < 2) {
     return res
       .status(400)
       .json({ message: 'Es necesario al menos 2 imágenes' });
@@ -65,6 +69,16 @@ const updateProducts = async (
     }
 
     // TODO: eliminar las imagenes en Cloudinary
+    product.images.forEach(async (image) => {
+      if (!images.includes(image)) {
+        // Delete for cloudinary
+        const [fileId, extension] = image
+          .substring(image.lastIndexOf('/') + 1)
+          .split('.');
+        console.log({ image, fileId, extension });
+        await cloudinary.uploader.destroy(fileId);
+      }
+    });
 
     await product.update(req.body);
     await db.disconnect();
@@ -74,5 +88,39 @@ const updateProducts = async (
     console.log(error);
     await db.disconnect();
     return res.status(400).json({ message: 'Revidar los logs' });
+  }
+};
+
+const createProduct = async (
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) => {
+  const { images = [] } = req.body as IProduct;
+
+  if (images.length < 2) {
+    return res
+      .status(400)
+      .json({ message: 'El Producto necesita al menos dos imagenes' });
+  }
+
+  try {
+    await db.connect();
+    const productInDB = await Product.findOne({ slug: req.body.slug });
+    if (productInDB) {
+      await db.disconnect();
+      return res
+        .status(400)
+        .json({ message: 'Ya existe un producto con ese slug' });
+    }
+
+    const product = new Product(req.body);
+    await product.save();
+    await db.disconnect();
+
+    return res.status(201).json(product);
+  } catch (error) {
+    await db.disconnect();
+    console.log(error);
+    return res.status(400).json({ message: 'Revisar logs del servidor' });
   }
 };

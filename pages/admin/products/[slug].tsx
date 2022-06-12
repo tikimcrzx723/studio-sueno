@@ -1,9 +1,13 @@
-import { PropsWithChildren, useEffect, useState } from 'react';
+import {
+  ChangeEvent,
+  PropsWithChildren,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { useRouter } from 'next/router';
 import { GetServerSideProps, NextPage } from 'next';
 import { useForm } from 'react-hook-form';
-
-import { AdminLayout } from '../../../components/layouts';
-import { IProduct } from '../../../interfaces';
 
 import {
   DriveFileRenameOutline,
@@ -31,7 +35,12 @@ import {
   RadioGroup,
   TextField,
 } from '@mui/material';
+
+import { AdminLayout } from '../../../components/layouts';
+import { IProduct } from '../../../interfaces';
 import { dbProducts } from '../../../database';
+import { appApi } from '../../../api';
+import { Product } from '../../../models';
 
 const validTypes = ['shirts', 'pants', 'hoodies', 'hats'];
 const validGender = ['men', 'women', 'kid', 'unisex'];
@@ -56,7 +65,10 @@ interface Props {
 }
 
 const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newTagValue, setNewTagValue] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const {
     register,
@@ -118,9 +130,56 @@ const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
     setValue('tags', updatedTags, { shouldValidate: true });
   };
 
-  const onSubmit = (form: FormData) => {
-    if (form.images.length < 2) {
-      return alert('Mínimo 2 imagenes');
+  const onFilesSelected = async ({ target }: ChangeEvent<HTMLInputElement>) => {
+    if (!target.files || target.files.length === 0) {
+      return;
+    }
+
+    try {
+      for (const file of target.files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const { data } = await appApi.post<{ message: string }>(
+          `/admin/uploads`,
+          formData
+        );
+        setValue('images', [...getValues('images'), data.message], {
+          shouldValidate: true,
+        });
+      }
+    } catch (error) {
+      console.log({ error });
+    }
+  };
+
+  const onDeleteImage = (image: string) => {
+    setValue(
+      'images',
+      getValues('images').filter((img) => img !== image),
+      { shouldValidate: true }
+    );
+  };
+
+  const onSubmit = async (form: FormData) => {
+    if (form.images.length < 2) return alert('Mínimo 2 imagenes');
+    setIsSaving(true);
+
+    try {
+      const { data } = await appApi({
+        url: '/admin/products',
+        method: form._id ? 'PUT' : 'POST',
+        data: form,
+      });
+
+      console.log({ data });
+      if (!form._id) {
+        router.replace(`/admin/products/${form.slug}`);
+      } else {
+        setIsSaving(false);
+      }
+    } catch (error) {
+      console.log(error);
+      setIsSaving(false);
     }
   };
   return (
@@ -136,6 +195,7 @@ const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
             startIcon={<SaveOutlined />}
             sx={{ width: '150px' }}
             type='submit'
+            disabled={isSaving}
           >
             Guardar
           </Button>
@@ -325,10 +385,19 @@ const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
                 color='secondary'
                 fullWidth
                 startIcon={<UploadOutlined />}
+                onClick={() => fileInputRef.current?.click()}
                 sx={{ mb: 3 }}
               >
                 Cargar imagen
               </Button>
+              <input
+                ref={fileInputRef}
+                type='file'
+                multiple
+                accept='.png, .jpg, .jpeg'
+                style={{ display: 'none' }}
+                onChange={onFilesSelected}
+              />
 
               <Chip
                 label='Es necesario al 2 imagenes'
@@ -337,17 +406,21 @@ const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
               />
 
               <Grid container spacing={2}>
-                {product.images.map((img) => (
+                {getValues('images').map((img) => (
                   <Grid item xs={4} sm={3} key={img}>
                     <Card>
                       <CardMedia
                         component='img'
                         className='fadeIn'
-                        image={`/products/${img}`}
+                        image={img}
                         alt={img}
                       />
                       <CardActions>
-                        <Button fullWidth color='error'>
+                        <Button
+                          fullWidth
+                          color='error'
+                          onClick={() => onDeleteImage(img)}
+                        >
                           Borrar
                         </Button>
                       </CardActions>
@@ -369,7 +442,16 @@ const ProductAdminPage: NextPage<PropsWithChildren<Props>> = ({ product }) => {
 export const getServerSideProps: GetServerSideProps = async ({ query }) => {
   const { slug = '' } = query;
 
-  const product = await dbProducts.getProductBySlug(slug.toString());
+  let product: IProduct | null;
+
+  if (slug === 'new') {
+    const tempProduct = JSON.parse(JSON.stringify(new Product()));
+    delete tempProduct._id;
+    tempProduct.images = ['one.png', 'two.png'];
+    product = tempProduct;
+  } else {
+    product = await dbProducts.getProductBySlug(slug.toString());
+  }
 
   if (!product) {
     return {
